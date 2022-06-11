@@ -1,3 +1,3 @@
 # Bitcoin_tweets
 
-run tf-idf.py
+run tfidf_model.py
