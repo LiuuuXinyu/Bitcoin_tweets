@@ -1,5 +1,6 @@
 from tkinter import X
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KNeighborsClassifier
@@ -25,7 +26,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
 
 
 
@@ -65,7 +66,7 @@ def model_type(type):
     'max_depth':11,
     'reg_alpha':0.1,
     'reg_lambda':0.2,   
-    'objective':'multiclass',
+    
     'n_estimators':300,
     #'class_weight':weight
 }       
@@ -83,12 +84,16 @@ if __name__=='__main__':
  
 
 
-    X_train = X_train.sample(100000)
  
     X_train['RiseFall'].replace('Rise',1,inplace = True)
-    X_train['RiseFall'].replace('Fall',-1,inplace = True)
-    X_train['RiseFall'].replace('Equal',0,inplace = True)    
-    Y_train = X_train['RiseFall']# 获取标签值
+    X_train['RiseFall'].replace('Fall',0,inplace = True)
+    X_train['RiseFall'].replace('Equal',1,inplace = True)  
+    class_1 = X_train[X_train['RiseFall']==1].sample(n=50000)
+    class_0 = X_train[X_train['RiseFall']==0].sample(n=50000)
+    class_1 = class_1.append(class_0)
+    X_train=class_1
+
+    Y_train = X_train['RiseFall']
     X_train.dropna()
 
     #X_train_processed = X_train.drop(columns=['Id',  'Summary','Score','ProductId','UserId'])
@@ -97,7 +102,7 @@ if __name__=='__main__':
 
 
 
-    X_train_processed = X_train.drop(columns=['user_name','user_location','user_description','date','user_created','user_verified','hashtags','tweet_source','RiseFall'])
+    X_train_processed = X_train.drop(columns=['user_name','user_location','user_description','user_favourites','user_followers','date','user_created','user_verified','hashtags','tweet_source','RiseFall'])
     X_train_processed['text'] = X_train_processed['text'].values.astype('U')
     #X_submission_processed = X_submission.drop(columns=['Id', 'Summary','Score'])
 
@@ -131,18 +136,23 @@ if __name__=='__main__':
     x_train,x_test,y_train,y_test= train_test_split(X_train_processed, Y_train,random_state= 42)
 
 
-    kf = KFold(n_splits=5)
+
 
     pipe.fit(x_train,y_train)
     print('end training.....')
 
-
+    
     test_result = pipe.predict(x_test)
 
     print('accuracy=',accuracy_score(y_test,test_result))
     #print(classification_report(y_test, test_result))
     #print('y_test', y_test)
-    #print('pred', test_result)
+    #print('pred', test_result
+
+    #kfold
+    scores = cross_val_score(pipe,x_train,y_train,cv=10)
+    print('test accuracy:%s'%scores)
+    print('CV accurecy:%3f +/- %.3f'%(np.mean(scores),np.std(scores)))
 
     # %matplotlib inline
     import matplotlib.pyplot as plt
