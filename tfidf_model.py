@@ -50,8 +50,6 @@ def model_type(type):
     print('start training.....')
     if type == 'lr':
         clf = LogisticRegressionCV()
-    elif type == 'nb':
-        clf = MultinomialNB()
     elif type == 'svc':
         clf = LinearSVC(random_state = 42,tol=1e-5)
     elif type == 'rf':
@@ -60,14 +58,13 @@ def model_type(type):
         clf = PCA(n_components=3)
     elif type == 'lgb':
         params_sklearn = {
-    'learning_rate':0.1,
+    'learning_rate':0.05,
     'max_bin':150,
     'num_leaves':32,    
     'max_depth':11,
     'reg_alpha':0.1,
     'reg_lambda':0.2,   
-    
-    'n_estimators':300,
+    'n_estimators':500,
     #'class_weight':weight
 }       
         clf = lgb.LGBMClassifier(**params_sklearn)
@@ -92,24 +89,16 @@ if __name__=='__main__':
     class_0 = X_train[X_train['RiseFall']==0].sample(n=50000)
     class_1 = class_1.append(class_0)
     X_train=class_1
-
-    Y_train = X_train['RiseFall']
     X_train.dropna()
-
-    #X_train_processed = X_train.drop(columns=['Id',  'Summary','Score','ProductId','UserId'])
-    #X_train_processed['Text'] = X_train_processed['Text'].values.astype('U')
-    #X_submission_processed = X_submission.drop(columns=['Id', 'Summary', 'Score','ProductId','UserId'])
+    Y_train = X_train['RiseFall']
 
 
 
-    X_train_processed = X_train.drop(columns=['user_name','user_location','user_description','user_favourites','user_followers','date','user_created','user_verified','hashtags','tweet_source','RiseFall'])
+    X_train_processed = X_train.drop(columns=['user_name','user_friends','user_location','user_description','user_favourites','user_followers','date','user_created','user_verified','hashtags','tweet_source','RiseFall'])
     X_train_processed['text'] = X_train_processed['text'].values.astype('U')
-    #X_submission_processed = X_submission.drop(columns=['Id', 'Summary','Score'])
 
-    #print(len(X_submission_processed))
-
-    #X_submission_processed['Text'] = X_submission_processed['Text'].values.astype('U')
-    #print(len(X_submission_processed))
+    X_train_processed['Helpfulness'].fillna(X_train_processed['Helpfulness'].mean(),inplace = True)
+    X_train_processed = X_train_processed.replace((np.inf,-np.inf,np.nan),0)
 
  
 
@@ -125,6 +114,7 @@ if __name__=='__main__':
     [('tfidf1', vectorizer1, 'text')],
     remainder='passthrough')
 
+
 # fit the model
     pipe = Pipeline([
                   ('tfidf', column_transformer),
@@ -132,7 +122,6 @@ if __name__=='__main__':
                 ])
 
 
-    # 切分数据集
     x_train,x_test,y_train,y_test= train_test_split(X_train_processed, Y_train,random_state= 42)
 
 
@@ -150,9 +139,13 @@ if __name__=='__main__':
     #print('pred', test_result
 
     #kfold
+
+    print('kfold .....')
+
     scores = cross_val_score(pipe,x_train,y_train,cv=10)
     print('test accuracy:%s'%scores)
     print('CV accurecy:%3f +/- %.3f'%(np.mean(scores),np.std(scores)))
+
 
     # %matplotlib inline
     import matplotlib.pyplot as plt
@@ -162,9 +155,4 @@ if __name__=='__main__':
     fig, ax = plot_confusion_matrix(conf_mat=CM , figsize=(10, 5))
     plt.show()
 
-    # Predict the score using the model
-    #print(len(X_submission_processed))
-    #X_submission['Score'] = pipe.predict(X_submission_processed)
-    # Create the submission file
-    #submission = X_submission[['Id', 'Score']]
-    #submission.to_csv("./data/submission.csv", index=False)
+
